@@ -195,6 +195,7 @@ export default function Register() {
               type="file" 
               id="photo-upload"
               accept="image/*"
+              capture="user"
               className="hidden" 
               onChange={handlePhotoSelect}
             />
