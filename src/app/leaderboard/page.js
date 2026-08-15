@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trophy, Medal, Home, User, Flame } from 'lucide-react';
+import { Trophy, Home, User, BadgeCheck, Zap } from 'lucide-react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
@@ -27,20 +27,12 @@ export default function Leaderboard() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        // 1. Fetch all participants
         const querySnapshot = await getDocs(collection(db, "participants"));
-        
         const participants = [];
         querySnapshot.forEach((doc) => {
-          participants.push({
-            id: doc.id,
-            ...doc.data()
-          });
+          participants.push({ id: doc.id, ...doc.data() });
         });
-
-        // 2. Sort them by score (Highest to Lowest) in JavaScript memory
         participants.sort((a, b) => (b.score || 0) - (a.score || 0));
-
         setLeaders(participants);
       } catch (error) {
         console.error("Error fetching leaderboard:", error);
@@ -48,90 +40,87 @@ export default function Leaderboard() {
         setLoading(false);
       }
     };
-
     fetchLeaderboard();
-    
-    // Auto-refresh the leaderboard every 30 seconds for the TV display!
     const interval = setInterval(fetchLeaderboard, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white font-sans pb-24">
+    <main className="min-h-screen bg-[#0B1121] text-white font-sans pb-24">
       
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 pt-12 pb-8 px-6 text-center shadow-xl shadow-black/50 border-b border-slate-800">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-white to-green-500"></div>
+      {/* Sci-Fi Gauge Header */}
+      <div className="relative pt-12 pb-6 px-6 text-center overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
         
-        <Trophy className="w-16 h-16 mx-auto text-orange-400 mb-4 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-        <h1 className="text-3xl font-extrabold tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-green-400">
+        {/* Speedometer Arc Graphic Simulation */}
+        <div className="relative w-48 h-24 mx-auto overflow-hidden mb-4">
+          <div className="absolute w-48 h-48 border-[12px] border-slate-800 rounded-full top-0 left-0"></div>
+          <div className="absolute w-48 h-48 border-[12px] border-t-orange-500 border-l-yellow-400 border-r-slate-800 border-b-transparent rounded-full top-0 left-0 transform -rotate-45"></div>
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-[#0B1121] p-3 rounded-t-full">
+             <Trophy className="w-12 h-12 text-orange-400 drop-shadow-[0_0_15px_rgba(249,115,22,0.6)]" />
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
           Live Rankings
         </h1>
-        <p className="text-slate-400 text-sm mt-2 max-w-xs mx-auto">
-          The top patriot wins the Drone on August 15th!
-        </p>
       </div>
 
       {/* Leaderboard List */}
-      <div className="max-w-md mx-auto px-4 pt-6 space-y-4">
+      <div className="max-w-md mx-auto px-4 pt-2 space-y-3">
         {loading ? (
           <div className="flex justify-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-orange-500"></div>
           </div>
         ) : leaders.length === 0 ? (
-          <div className="text-center py-10 text-slate-500">No patriots have joined the challenge yet.</div>
+          <div className="text-center py-10 text-slate-500">No patriots have joined yet.</div>
         ) : (
           leaders.map((user, index) => (
             <div 
               key={user.id} 
-              className={`relative flex items-center p-4 rounded-2xl border ${
-                index === 0 ? 'bg-orange-500/10 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 
-                index === 1 ? 'bg-slate-400/10 border-slate-400/50' :
-                index === 2 ? 'bg-amber-700/10 border-amber-700/50' :
-                'bg-slate-900 border-slate-800'
-              }`}
+              className="bg-[#151C2F] border border-slate-800 rounded-2xl p-3 flex items-center shadow-lg"
             >
-              {/* Rank Badge */}
-              <div className="w-10 flex-shrink-0 text-center mr-2">
-                {index === 0 ? <Medal className="w-8 h-8 text-orange-400 mx-auto" /> :
-                 index === 1 ? <Medal className="w-7 h-7 text-slate-300 mx-auto" /> :
-                 index === 2 ? <Medal className="w-6 h-6 text-amber-600 mx-auto" /> :
-                 <span className="text-lg font-bold text-slate-500">#{index + 1}</span>}
+              {/* Rank Block */}
+              <div className={`w-8 h-10 flex-shrink-0 flex items-center justify-center rounded-lg mr-3 font-black text-lg ${
+                index === 0 ? 'bg-amber-500 text-[#0B1121]' : 
+                index === 1 ? 'bg-slate-300 text-[#0B1121]' :
+                index === 2 ? 'bg-amber-800 text-white' :
+                'bg-slate-800 text-slate-400'
+              }`}>
+                {index + 1}
               </div>
 
-              {/* Avatar */}
-              <div className="w-12 h-16 flex-shrink-0 rounded-lg overflow-hidden border border-slate-700 mr-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* Circular Avatar */}
+              <div className="relative w-12 h-12 flex-shrink-0 mr-4">
                 <img 
                   src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.name || 'U'}&background=1e293b&color=f97316`} 
                   alt={user.name} 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-full border-2 border-slate-700"
                 />
+                <BadgeCheck className="absolute -bottom-1 -right-1 w-5 h-5 text-blue-500 bg-[#151C2F] rounded-full" />
               </div>
 
-              {/* Info */}
+              {/* Name & Title */}
               <div className="flex-grow min-w-0">
-                <h3 className={`font-bold truncate ${index === 0 ? 'text-orange-400 text-lg' : 'text-slate-200'}`}>
+                <h3 className="font-bold text-slate-100 text-sm truncate flex items-center">
                   {user.name}
                 </h3>
-                {index === 0 && (
-                  <div className="flex items-center text-xs text-orange-500 mt-1 font-medium">
-                    <Flame className="w-3 h-3 mr-1" /> CURRENT LEADER
-                  </div>
-                )}
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {index === 0 ? "Grand Champion Status" : "Tricolor Challenger"}
+                </p>
               </div>
 
-              {/* Score */}
-              <div className="text-right ml-4">
-                <span className={`text-2xl font-black ${
-                  index === 0 ? 'text-orange-400' : 
-                  index === 1 ? 'text-slate-300' : 
+              {/* Score Right Align */}
+              <div className="text-right ml-2 flex flex-col items-end">
+                <span className={`text-xl font-black ${
+                  index === 0 ? 'text-amber-400 drop-shadow-md' : 
+                  index === 1 ? 'text-slate-200' : 
                   index === 2 ? 'text-amber-600' : 
-                  'text-slate-100'
+                  'text-orange-500'
                 }`}>
                   {user.score || 0}
                 </span>
-                <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">PTS</span>
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">PTS</span>
               </div>
             </div>
           ))
@@ -139,32 +128,30 @@ export default function Leaderboard() {
       </div>
 
       {/* FIXED BOTTOM NAVIGATION */}
-      <div className="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 pb-safe pt-2 px-2 z-50">
-        <div className="flex justify-around items-center p-2 max-w-md mx-auto">
-          <button onClick={() => router.push('/')} className="flex flex-col items-center text-slate-400 hover:text-white transition-colors">
-            <Home className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">HOME</span>
+      <div className="fixed bottom-0 left-0 w-full bg-[#0B1121]/90 backdrop-blur-md border-t border-slate-800 pb-safe pt-3 px-4 z-50">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          <button onClick={() => router.push('/')} className="flex flex-col items-center text-slate-500 hover:text-white w-16">
+            <Home className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">HOME</span>
           </button>
           
-          <button className="flex flex-col items-center text-orange-500">
-            <Trophy className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">RANK</span>
+          {/* Active Tab */}
+          <button className="flex flex-col items-center text-orange-500 w-16 relative">
+            <div className="absolute -top-3 w-10 h-1 bg-orange-500 rounded-b-full"></div>
+            <Trophy className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">RANK</span>
           </button>
 
-          {/* FIXED: Now reads the user's ID from memory to take them back to their profile! */}
           <button 
             onClick={() => {
               const userId = localStorage.getItem('userId');
-              if (userId) {
-                router.push(`/dashboard?id=${userId}`);
-              } else {
-                router.push('/login');
-              }
+              if (userId) router.push(`/dashboard?id=${userId}`);
+              else router.push('/login');
             }} 
-            className="flex flex-col items-center text-slate-400 hover:text-white transition-colors"
+            className="flex flex-col items-center text-slate-500 hover:text-white w-16"
           >
-            <User className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">PROFILE</span>
+            <User className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">PROFILE</span>
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Check, X, RefreshCcw, Camera } from 'lucide-react';
+import { ShieldCheck, Check, X, RefreshCcw, Camera, Lock, LogOut } from 'lucide-react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, increment, getDoc } from 'firebase/firestore';
 
@@ -18,15 +18,48 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
+// ==========================================
+// CHANGE YOUR ADMIN PASSWORD HERE
+// ==========================================
+const ADMIN_PASSCODE = "stem@2026";
+
 export default function AdminDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
+  useEffect(() => {
+    // Check if already authenticated in this session
+    const authStatus = sessionStorage.getItem('adminAuth');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (passcode === ADMIN_PASSCODE) {
+      sessionStorage.setItem('adminAuth', 'true');
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Incorrect admin passcode!');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth');
+    setIsAuthenticated(false);
+    setPasscode('');
+  };
+
   const fetchPendingSubmissions = async () => {
     setLoading(true);
     try {
-      // 1. Get all pending submissions
       const q = query(collection(db, "submissions"), where("status", "==", "pending"));
       const querySnapshot = await getDocs(q);
       
@@ -34,7 +67,6 @@ export default function AdminDashboard() {
       for (const document of querySnapshot.docs) {
         const subData = document.data();
         
-        // 2. Fetch the user's name so you know who submitted it!
         let userName = "Unknown Patriot";
         if (subData.userId) {
           const userDoc = await getDoc(doc(db, "participants", subData.userId));
@@ -50,7 +82,6 @@ export default function AdminDashboard() {
         });
       }
       
-      // Sort so oldest is first in the queue
       setSubmissions(pendingData.sort((a, b) => a.createdAt - b.createdAt));
     } catch (error) {
       console.error("Error fetching submissions:", error);
@@ -60,18 +91,18 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchPendingSubmissions();
-  }, []);
+    if (isAuthenticated) {
+      fetchPendingSubmissions();
+    }
+  }, [isAuthenticated]);
 
   const handleAction = async (submission, action) => {
     setProcessingId(submission.id);
     try {
-      // 1. Update the submission status to 'approved' or 'rejected'
       await updateDoc(doc(db, "submissions", submission.id), {
         status: action
       });
 
-      // 2. If approved, add points to the user's profile!
       if (action === 'approved') {
         let pointsToAdd = 0;
         if (submission.category === 'find') pointsToAdd = 1;
@@ -83,7 +114,6 @@ export default function AdminDashboard() {
         });
       }
 
-      // 3. Remove from the local queue on the screen
       setSubmissions(prev => prev.filter(sub => sub.id !== submission.id));
       
     } catch (error) {
@@ -93,6 +123,49 @@ export default function AdminDashboard() {
       setProcessingId(null);
     }
   };
+
+  // If not authenticated, show passcode prompt
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white font-sans flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-6">
+            <div className="bg-orange-500/10 border border-orange-500/30 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-orange-500" />
+            </div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white">Admin Restricted</h1>
+            <p className="text-slate-400 text-sm mt-1">Enter passcode to access Mission Control.</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <input 
+                type="password" 
+                required
+                placeholder="Enter Admin Passcode" 
+                value={passcode} 
+                onChange={(e) => setPasscode(e.target.value)}
+                className="block w-full px-4 py-3 border border-slate-700 rounded-xl bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs font-medium p-3 rounded-xl text-center">
+                {loginError}
+              </div>
+            )}
+
+            <button 
+              type="submit"
+              className="w-full py-3 px-6 font-bold text-white bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 rounded-xl shadow-lg transition-all active:scale-95"
+            >
+              UNLOCK MISSION CONTROL
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white font-sans p-6 pb-20">
@@ -106,12 +179,22 @@ export default function AdminDashboard() {
           </h1>
           <p className="text-slate-400 text-sm mt-1">Review Tricolor Challenge Submissions</p>
         </div>
-        <button 
-          onClick={fetchPendingSubmissions}
-          className="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition-colors"
-        >
-          <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin text-orange-500' : ''}`} />
-        </button>
+        
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={fetchPendingSubmissions}
+            className="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition-colors"
+            title="Refresh Queue"
+          >
+            <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 rounded-xl font-bold text-sm flex items-center transition-colors"
+          >
+            <LogOut className="w-4 h-4 mr-1" /> LOCK
+          </button>
+        </div>
       </div>
 
       {/* Main Queue */}

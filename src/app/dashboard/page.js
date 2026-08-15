@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Camera, Trophy, User, Home, Sparkles, Paintbrush, Hammer, ChevronRight, LogOut } from 'lucide-react';
+import { Trophy, User, Home, Sparkles, Paintbrush, Hammer, LogOut, Bell, Menu, BadgeCheck, Shield, Rocket } from 'lucide-react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
-// TODO: Paste your Firebase Config from Step 3 here!
+// TODO: Paste your Firebase Config here!
 const firebaseConfig = {
   apiKey: "AIzaSyBO1jti5EPkPnlGU5rbX5a8ec-bQ0MC92c",
   authDomain: "salute-india-11453.firebaseapp.com",
@@ -16,7 +16,6 @@ const firebaseConfig = {
   appId: "1:216529251442:web:de95117cf0c5236ea066eb"
 };
 
-// Safely initialize Firebase (Prevents duplicate app errors during hot-reloads)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
@@ -24,47 +23,33 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // NEW: Read ID from URL, but if it's missing, grab it from local storage!
   const urlId = searchParams.get('id');
   const [id, setId] = useState(urlId);
-
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ find: 0, create: 0, build: 0 });
 
   useEffect(() => {
-    // Check local storage if URL parameter is missing
     const storedId = localStorage.getItem('userId');
-    if (!id && storedId) {
-      setId(storedId);
-    }
+    if (!id && storedId) setId(storedId);
   }, [id]);
 
   useEffect(() => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
+    if (!id) { setLoading(false); return; }
 
     const fetchUser = async () => {
       try {
         const docRef = doc(db, "participants", id);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          setUserData(docSnap.data());
-        } else {
-          console.log("No such document!");
-        }
+        if (docSnap.exists()) setUserData(docSnap.data());
 
-        // NEW: Fetch user's approved submissions to update the activity counters
         const q = query(collection(db, "submissions"), where("userId", "==", id));
         const subSnap = await getDocs(q);
         
         let counts = { find: 0, create: 0, build: 0 };
         subSnap.forEach((doc) => {
           const data = doc.data();
-          // Only count it if the Admin has approved it!
           if (data.status === 'approved') {
             if (data.category === 'find') counts.find++;
             if (data.category === 'create') counts.create++;
@@ -72,156 +57,187 @@ function DashboardContent() {
           }
         });
         setStats(counts);
-
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchUser();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-[#0B1121] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+    </div>
+  );
 
-  if (!userData) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white px-6 text-center">
-        <h1 className="text-2xl font-bold mb-2">Participant Not Found</h1>
-        <p className="text-slate-400 mb-6">We couldn't find your profile. Please register again.</p>
-        <button 
-          onClick={() => router.push('/register')}
-          className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold"
-        >
-          Go to Registration
-        </button>
-      </div>
-    );
-  }
+  if (!userData) return (
+    <div className="min-h-screen bg-[#0B1121] flex flex-col items-center justify-center text-white px-6 text-center">
+      <h1 className="text-2xl font-bold mb-2">Profile Not Found</h1>
+      <button onClick={() => router.push('/register')} className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold mt-4">Go to Registration</button>
+    </div>
+  );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white font-sans pb-24">
+    <main className="min-h-screen bg-[#0B1121] text-white font-sans pb-24">
       
-      {/* HEADER / VIP TRADING CARD AVATAR SECTION */}
-      <div className="relative bg-gradient-to-b from-slate-900 to-slate-950 pt-10 pb-8 px-6 text-center shadow-xl shadow-black/50 border-b border-slate-800">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-white to-green-500"></div>
+      {/* Top App Bar */}
+      <div className="flex justify-between items-center px-6 pt-8 pb-4">
+        <div className="flex items-center space-x-2">
+          <Shield className="w-6 h-6 text-blue-500" />
+          <h1 className="text-lg font-black tracking-widest text-slate-200">STEM <span className="text-blue-500 font-bold text-sm">ROBOTICS</span></h1>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Bell className="w-6 h-6 text-slate-400" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0B1121]"></span>
+          </div>
+          <button onClick={() => { localStorage.removeItem('userId'); router.push('/'); }}>
+            <Menu className="w-6 h-6 text-slate-400" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Profile Card (Sci-Fi Aesthetic) */}
+      <div className="px-4">
+        <div className="bg-[#151C2F] rounded-3xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-800 relative">
+          
+          {/* Tech Header Background */}
+          <div className="h-32 bg-gradient-to-r from-blue-900/40 via-slate-800 to-blue-900/40 relative overflow-hidden">
+             {/* Optional: Add a real tech background image here like your screenshot */}
+             {/* <img src="/tech-bg.png" className="w-full h-full object-cover opacity-50 absolute inset-0" /> */}
+             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+          </div>
+
+          {/* Avatar Component */}
+          <div className="absolute top-12 left-6">
+            <div className="relative w-24 h-24 rounded-full border-4 border-[#151C2F] overflow-hidden bg-slate-800 shadow-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={userData.avatar_url || `https://ui-avatars.com/api/?name=${userData.name || 'User'}&background=1e293b&color=f97316`} 
+                alt="Avatar" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <BadgeCheck className="absolute bottom-0 right-0 w-8 h-8 text-green-500 bg-[#151C2F] rounded-full p-1" />
+          </div>
+
+          {/* Profile Info */}
+          <div className="pt-6 px-6 pb-6">
+            <div className="flex justify-between items-start mt-2">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-white">{userData.name}</h2>
+                <p className="text-slate-400 text-xs mt-1">Real Robotics Challenge</p>
+                <div className="flex text-amber-500 text-[10px] mt-2 space-x-1">
+                  ★ ★ ★ <span className="text-slate-500 ml-1">★ ★</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">SCORE</span>
+                <span className="text-3xl font-black text-white">{userData.score || 0} <span className="text-sm text-slate-500">PTS</span></span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <button 
+                onClick={() => router.push(`/capture?id=${id}`)}
+                className="bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/20 transition-all text-sm uppercase tracking-wider flex items-center justify-center"
+              >
+                + ADD PTS
+              </button>
+              <button 
+                onClick={() => router.push('/leaderboard')}
+                className="bg-green-500 hover:bg-green-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-500/20 transition-all text-sm uppercase tracking-wider flex items-center justify-center"
+              >
+                RANKINGS
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Activity List Section */}
+      <div className="px-4 pt-8">
+        <h3 className="text-slate-400 font-bold tracking-widest text-[11px] uppercase mb-4 ml-2">ACTIVITY</h3>
         
-        {/* LOGOUT BUTTON */}
-        <button 
-          onClick={() => {
-            localStorage.removeItem('userId'); // Clear memory on logout
-            router.push('/');
-          }}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white flex items-center text-xs font-bold bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700 transition-colors"
-        >
-          <LogOut className="w-4 h-4 mr-1" />
-          LOGOUT
-        </button>
-
-        <div className="relative inline-block mb-4 mt-4">
-          {/* VIP Trading Card Shape (w-32 h-44) */}
-          <div className="w-32 h-44 mx-auto rounded-xl border-4 border-slate-700 overflow-hidden shadow-2xl relative bg-slate-800">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src={userData.avatar_url || `https://ui-avatars.com/api/?name=${userData.name || 'User'}&background=1e293b&color=f97316&size=256`} 
-              alt={userData.name} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.src = `https://ui-avatars.com/api/?name=${userData.name || 'User'}&background=1e293b&color=f97316&size=256`;
-              }}
-            />
-          </div>
-          <div className="absolute -bottom-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full border-2 border-slate-950 shadow-lg">
-            RANK: TBD
-          </div>
-        </div>
-
-        <h1 className="text-2xl font-extrabold tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 mt-2">
-          {userData.name}
-        </h1>
-        <p className="text-orange-500 font-bold text-lg tracking-wider drop-shadow-md">
-          Score: {userData.score || 0} PTS
-        </p>
-      </div>
-
-      {/* ACTION BUTTON */}
-      <div className="px-6 -mt-6 relative z-10">
-        <button 
-          onClick={() => router.push(`/capture?id=${id}`)}
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/30 flex items-center justify-center transition-transform active:scale-95 border border-green-400/50"
-        >
-          <Camera className="w-6 h-6 mr-2" />
-          SUBMIT TRICOLOR DISCOVERY
-        </button>
-      </div>
-
-      {/* STATS SECTION */}
-      <div className="px-6 pt-8 space-y-4">
-        <h3 className="text-slate-400 font-bold tracking-widest text-xs uppercase mb-4">Your Activity</h3>
-        
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center">
-            <div className="bg-orange-500/20 p-2 rounded-lg mr-3 border border-orange-500/30">
-              <Sparkles className="w-5 h-5 text-orange-400" />
+        <div className="space-y-4">
+          {/* Activity Item 1 */}
+          <div className="bg-[#151C2F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group">
+            <div className="flex items-center z-10">
+              <div className="bg-orange-500/10 p-3 rounded-xl border border-orange-500/20 mr-4">
+                <Sparkles className="w-6 h-6 text-orange-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-200 text-sm">Natural</h4>
+                <p className="text-slate-500 text-xs mt-1">Natural Discovery (+1)</p>
+                {/* Visual Progress Bar */}
+                <div className="w-24 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-orange-500 w-[60%]"></div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-200 text-sm">Natural Discoveries</h4>
-              <p className="text-slate-500 text-xs">Find existing tricolors (+1)</p>
+            <span className="text-2xl font-black text-slate-700 mr-2 z-10">{stats.find}</span>
+            <div className="absolute right-[-20px] top-[-20px] opacity-5">
+              <Sparkles className="w-32 h-32" />
             </div>
           </div>
-          <span className="text-xl font-black text-slate-300">{stats.find}</span>
-        </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center">
-            <div className="bg-slate-500/20 p-2 rounded-lg mr-3 border border-slate-500/30">
-              <Paintbrush className="w-5 h-5 text-slate-300" />
+          {/* Activity Item 2 */}
+          <div className="bg-[#151C2F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group">
+            <div className="flex items-center z-10">
+              <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 mr-4">
+                <Paintbrush className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-200 text-sm">Creative</h4>
+                <p className="text-slate-500 text-xs mt-1">Arrange objects (+2)</p>
+                <div className="w-24 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-blue-500 w-[30%]"></div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-200 text-sm">Creative Creations</h4>
-              <p className="text-slate-500 text-xs">Arrange objects (+2)</p>
-            </div>
+            <span className="text-2xl font-black text-slate-700 mr-2 z-10">{stats.create}</span>
           </div>
-          <span className="text-xl font-black text-slate-300">{stats.create}</span>
-        </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center">
-            <div className="bg-green-500/20 p-2 rounded-lg mr-3 border border-green-500/30">
-              <Hammer className="w-5 h-5 text-green-400" />
+          {/* Activity Item 3 */}
+          <div className="bg-[#151C2F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group">
+            <div className="flex items-center z-10">
+              <div className="bg-green-500/10 p-3 rounded-xl border border-green-500/20 mr-4">
+                <Rocket className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-200 text-sm">STEM Build</h4>
+                <p className="text-slate-500 text-xs mt-1">Engineer something (+3)</p>
+                <div className="w-24 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-green-500 w-[10%]"></div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-200 text-sm">STEM Builds</h4>
-              <p className="text-slate-500 text-xs">Engineer something (+3)</p>
-            </div>
+            <span className="text-2xl font-black text-slate-700 mr-2 z-10">{stats.build}</span>
           </div>
-          <span className="text-xl font-black text-slate-300">{stats.build}</span>
         </div>
       </div>
 
-      {/* FIXED BOTTOM NAVIGATION */}
-      <div className="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 pb-safe pt-2 px-2 z-50">
-        <div className="flex justify-around items-center p-2 max-w-md mx-auto">
-          <button onClick={() => router.push('/')} className="flex flex-col items-center text-slate-400 hover:text-white transition-colors">
-            <Home className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">HOME</span>
+      {/* FIXED BOTTOM NAVIGATION (Matching the Screenshot) */}
+      <div className="fixed bottom-0 left-0 w-full bg-[#0B1121]/90 backdrop-blur-md border-t border-slate-800 pb-safe pt-3 px-4 z-50">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          <button onClick={() => router.push('/')} className="flex flex-col items-center text-slate-500 hover:text-white w-16">
+            <Home className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">HOME</span>
           </button>
           
-          <button onClick={() => router.push('/leaderboard')} className="flex flex-col items-center text-slate-400 hover:text-white transition-colors">
-            <Trophy className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">RANK</span>
+          <button onClick={() => router.push('/leaderboard')} className="flex flex-col items-center text-slate-500 hover:text-white w-16">
+            <Trophy className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">RANK</span>
           </button>
 
-          <button className="flex flex-col items-center text-orange-500">
-            <User className="w-6 h-6 mb-1" />
-            <span className="text-[10px] font-bold tracking-wider">PROFILE</span>
+          {/* Active Tab */}
+          <button className="flex flex-col items-center text-orange-500 w-16 relative">
+            <div className="absolute -top-3 w-10 h-1 bg-orange-500 rounded-b-full"></div>
+            <User className="w-5 h-5 mb-1" />
+            <span className="text-[9px] font-bold tracking-wider">PROFILE</span>
           </button>
         </div>
       </div>
@@ -232,7 +248,7 @@ function DashboardContent() {
 
 export default function Dashboard() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0B1121] text-white flex items-center justify-center">Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );
